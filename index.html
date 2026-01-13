@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Task Deadline Tracker</title>
+
+  <style>
+    :root{
+      --bg:#0b1220; --card:#121b2e; --muted:#9fb0d0; --text:#e9f0ff; --line:#24304c;
+      --good:#4ade80; --bad:#fb7185; --warn:#fbbf24;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1200px 700px at 20% 0%, #18254a 0%, var(--bg) 60%);
+      color:var(--text);
+    }
+    .wrap{ max-width:1150px; margin:0 auto; padding:16px; }
+    header{ display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+    h1{ margin:0; font-size:20px; letter-spacing:.2px; }
+    .sub{ margin-top:6px; color:var(--muted); font-size:13px; }
+    .grid{ display:grid; grid-template-columns: 1.1fr .9fr; gap:12px; margin-top:12px; }
+    .card{
+      background: rgba(18,27,46,.92);
+      border: 1px solid rgba(36,48,76,.8);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .pill{
+      border:1px solid rgba(36,48,76,.9);
+      background: rgba(15,23,42,.65);
+      padding:8px 10px; border-radius:999px;
+      color:var(--muted); font-size:12px;
+      display:flex; gap:8px; align-items:center;
+    }
+    .pill strong{ color:var(--text); }
+    label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    input, select, button{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(36,48,76,.9);
+      background:#0f172a;
+      color:var(--text);
+      outline:none;
+    }
+    input:focus, select:focus{ border-color: rgba(159,176,208,.9); }
+    button{
+      cursor:pointer;
+      background: linear-gradient(180deg, #1f3b8a, #152a67);
+      border: 1px solid rgba(120,147,255,.35);
+      font-weight:700;
+    }
+    button:active{ transform: translateY(1px); }
+    .btn-lite{
+      background: rgba(15,23,42,.75);
+      border: 1px solid rgba(36,48,76,.9);
+      font-weight:700;
+      padding:9px 10px;
+      border-radius:12px;
+    }
+    .btn-danger{ border-color: rgba(251,113,133,.35); color: var(--bad); }
+    .btn-good{ border-color: rgba(74,222,128,.35); color: var(--good); }
+
+    /* Form grid (start + due + days + category + remind) */
+    .form{
+      display:grid;
+      grid-template-columns: 1.5fr 1fr 1fr .9fr .8fr;
+      gap:10px;
+      align-items:end;
+    }
+
+    table{ width:100%; border-collapse: collapse; margin-top:10px; }
+    th, td{ text-align:left; padding:10px 8px; border-bottom:1px solid rgba(36,48,76,.65); vertical-align:middle; }
+    th{ font-size:12px; color:var(--muted); font-weight:700; }
+    td{ font-size:14px; }
+    .right{ text-align:right; }
+    .muted{ color:var(--muted); font-size:12px; }
+
+    .tag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800;
+      border: 1px solid rgba(36,48,76,.9);
+      background: rgba(15,23,42,.6);
+      line-height:1;
+      margin-right:6px;
+      margin-top:6px;
+    }
+    .dot{ width:10px; height:10px; border-radius:999px; display:inline-block; }
+    .good{ color:var(--good); }
+    .bad{ color:var(--bad); }
+    .warn{ color:var(--warn); }
+    .done{ text-decoration: line-through; opacity:.75; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+
+    /* Calendar */
+    .cal-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+    .cal-title{ font-weight:900; }
+    .cal-grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
+    .dow{ text-align:center; font-size:11px; color:var(--muted); padding:6px 0; }
+    .day{
+      min-height:78px;
+      border:1px solid rgba(36,48,76,.7);
+      background: rgba(15,23,42,.55);
+      border-radius: 14px;
+      padding:8px;
+      display:flex; flex-direction:column; gap:6px;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .day.out{ opacity:.45; }
+    .day.sel{ outline:2px solid rgba(120,147,255,.45); }
+    .daynum{ font-weight:900; font-size:12px; color:var(--text); display:flex; justify-content:space-between; gap:8px; }
+    .badge{
+      font-size:11px; font-weight:900; padding:2px 8px; border-radius:999px;
+      border:1px solid rgba(36,48,76,.9);
+      background: rgba(18,27,46,.7);
+      color: var(--muted);
+    }
+    .mini{ display:flex; flex-wrap:wrap; gap:4px; }
+    .mini .dot{ width:8px; height:8px; }
+
+    .footer{ margin-top:10px; color:var(--muted); font-size:12px; }
+
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+    @media (max-width: 760px){
+      .form{ grid-template-columns: 1fr; }
+      .actions{ justify-content:flex-start; }
+      .right{ text-align:left; }
+      .day{ min-height:68px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Task Deadline Tracker (PWA)</h1>
+        <div class="sub">
+          Enter Date Started + Date Due, OR Date Started + Total Days → auto-calc Due.
+          Weekends included. Day 1 = day after Date Started.
+        </div>
+      </div>
+      <div class="row">
+        <div class="pill" id="todayPill">Today: <strong></strong></div>
+        <button class="btn-lite" id="notifBtn" type="button">Enable notifications</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Tasks -->
+      <div class="card">
+        <form id="taskForm">
+          <div class="form">
+            <div>
+              <label for="title">Task</label>
+              <input id="title" required maxlength="120" placeholder="e.g., Finish census report" />
+            </div>
+
+            <div>
+              <label for="startDate">Date Started</label>
+              <input id="startDate" type="date" />
+            </div>
+
+            <div>
+              <label for="dueDate">Date Due</label>
+              <input id="dueDate" type="date" />
+            </div>
+
+            <div>
+              <label for="totalDays">Total Days (Day 1 = day after start)</label>
+              <input id="totalDays" type="number" min="0" step="1" placeholder="e.g., 10" />
+            </div>
+
+            <div>
+              <label for="category">Category</label>
+              <select id="category"></select>
+            </div>
+
+            <div>
+              <label for="remindDays">Remind</label>
+              <select id="remindDays" title="Notify N days before due date (when app is open)">
+                <option value="0" selected>No reminder</option>
+                <option value="1">1 day before</option>
+                <option value="2">2 days before</option>
+                <option value="3">3 days before</option>
+                <option value="7">7 days before</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button type="submit" style="max-width:220px;">Add task</button>
+            <button type="button" class="btn-lite" id="addCatBtn" style="max-width:220px;">Add category</button>
+            <button type="button" class="btn-lite btn-danger" id="clearAllBtn" style="max-width:220px;">Clear all</button>
+
+            <div class="pill" id="statsPill">
+              Total: <strong id="statTotal">0</strong> · Active: <strong id="statActive">0</strong> · Overdue: <strong id="statOverdue">0</strong>
+            </div>
+          </div>
+        </form>
+
+        <div class="row" style="margin-top:10px;">
+          <label class="pill" style="cursor:pointer;">
+            <span>Show:</span>
+            <select id="filter" style="width:auto; padding:6px 10px;">
+              <option value="all" selected>All</option>
+              <option value="active">Active</option>
+              <option value="overdue">Overdue</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+
+          <label class="pill" style="cursor:pointer;">
+            <span>Sort:</span>
+            <select id="sort" style="width:auto; padding:6px 10px;">
+              <option value="dueAsc" selected>Due (soonest)</option>
+              <option value="dueDesc">Due (latest)</option>
+              <option value="createdDesc">Newest</option>
+              <option value="createdAsc">Oldest</option>
+            </select>
+          </label>
+
+          <label class="pill" style="cursor:pointer; flex: 1;">
+            <span>Search:</span>
+            <input id="search" placeholder="type to search…" style="width:100%; padding:6px 10px;" />
+          </label>
+
+          <div class="pill" id="dayFilterPill" style="display:none;">
+            Showing tasks due on: <strong id="dayFilterText"></strong>
+            <button type="button" class="btn-lite" id="clearDayFilterBtn" style="width:auto; padding:6px 10px;">Clear</button>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width:30%;">Task</th>
+              <th style="width:14%;">Category</th>
+              <th style="width:14%;">Started</th>
+              <th style="width:14%;">Due</th>
+              <th style="width:8%;">Days</th>
+              <th style="width:8%;">Left</th>
+              <th style="width:8%;">Overdue</th>
+              <th class="right" style="width:12%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+
+        <div class="footer">
+          Notifications fire when the app is open/installed (browser limitation without push).
+        </div>
+      </div>
+
+      <!-- RIGHT: Calendar -->
+      <div class="card">
+        <div class="cal-head">
+          <div class="cal-title" id="calTitle">Calendar</div>
+          <div class="row">
+            <button class="btn-lite" id="prevMonthBtn" type="button">◀</button>
+            <button class="btn-lite" id="todayBtn" type="button">Today</button>
+            <button class="btn-lite" id="nextMonthBtn" type="button">▶</button>
+          </div>
+        </div>
+
+        <div class="cal-grid" id="dowRow"></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* -------------------- PWA register -------------------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try { await navigator.serviceWorker.register("./sw.js"); } catch {}
+  });
+}
+
+/* -------------------- Storage keys -------------------- */
+const STORAGE_TASKS = "tdt_tasks_v4";
+const STORAGE_CATS  = "tdt_categories_v4";
+const STORAGE_NOTIF = "tdt_notif_log_v1";
+
+/* -------------------- Utilities -------------------- */
+const msPerDay = 24 * 60 * 60 * 1000;
+
+function startOfLocalDay(d = new Date()) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function parseDateInput(value) {
+  const [y,m,day] = value.split("-").map(Number);
+  return new Date(y, m-1, day);
+}
+function toISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function formatDate(d) {
+  return d.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"2-digit" });
+}
+function dayDiffFromToday(dateObj) {
+  const today = startOfLocalDay();
+  const d = startOfLocalDay(dateObj);
+  return Math.round((d - today) / msPerDay);
+}
+function uid() {
+  return Math.random().toString(36).slice(2,10) + "-" + Date.now().toString(36);
+}
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+/* Rule: Day 1 = day AFTER start date. Weekends included. */
+function dueFromStartAndDays(startDateObj, totalDays) {
+  const s = startOfLocalDay(startDateObj);
+  const n = Number(totalDays || 0);
+  // Day 1 is next day, so + (n)
+  // Example: start Jan14, n=1 => due Jan15
+  s.setDate(s.getDate() + n);
+  return s;
+}
+function daysFromStartToDue(startDateObj, dueDateObj) {
+  // totalDays = number of days from start->due, where due = start + totalDays
+  const s = startOfLocalDay(startDateObj);
+  const d = startOfLocalDay(dueDateObj);
+  return Math.round((d - s) / msPerDay);
+}
+
+/* -------------------- State -------------------- */
+let categories = loadCategories();
+let tasks = loadTasks();
+
+function loadCategories(){
+  try {
+    const raw = localStorage.getItem(STORAGE_CATS);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch {}
+  return [
+    { id:"work",   name:"Work",   color:"#60a5fa" },
+    { id:"clinic", name:"Clinic", color:"#34d399" },
+    { id:"personal", name:"Personal", color:"#fbbf24" },
+  ];
+}
+function saveCategories(){ localStorage.setItem(STORAGE_CATS, JSON.stringify(categories)); }
+
+function loadTasks(){
+  try {
+    const raw = localStorage.getItem(STORAGE_TASKS);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch { return []; }
+}
+function saveTasks(){ localStorage.setItem(STORAGE_TASKS, JSON.stringify(tasks)); }
+
+function loadNotifLog(){
+  try {
+    const raw = localStorage.getItem(STORAGE_NOTIF);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch { return {}; }
+}
+function saveNotifLog(obj){ localStorage.setItem(STORAGE_NOTIF, JSON.stringify(obj)); }
+
+/* -------------------- DOM -------------------- */
+const todayPill = document.querySelector("#todayPill strong");
+todayPill.textContent = formatDate(new Date());
+
+const form = document.getElementById("taskForm");
+const titleEl = document.getElementById("title");
+const startEl = document.getElementById("startDate");
+const dueEl = document.getElementById("dueDate");
+const daysEl = document.getElementById("totalDays");
+const categoryEl = document.getElementById("category");
+const remindDaysEl = document.getElementById("remindDays");
+
+const tbody = document.getElementById("tbody");
+const filterEl = document.getElementById("filter");
+const sortEl = document.getElementById("sort");
+const searchEl = document.getElementById("search");
+
+const clearAllBtn = document.getElementById("clearAllBtn");
+const addCatBtn = document.getElementById("addCatBtn");
+const notifBtn = document.getElementById("notifBtn");
+
+const statTotal = document.getElementById("statTotal");
+const statActive = document.getElementById("statActive");
+const statOverdue = document.getElementById("statOverdue");
+
+const dayFilterPill = document.getElementById("dayFilterPill");
+const dayFilterText = document.getElementById("dayFilterText");
+const clearDayFilterBtn = document.getElementById("clearDayFilterBtn");
+
+/* Calendar DOM */
+const calTitle = document.getElementById("calTitle");
+const dowRow = document.getElementById("dowRow");
+const calGrid = document.getElementById("calGrid");
+const prevMonthBtn = document.getElementById("prevMonthBtn");
+const nextMonthBtn = document.getElementById("nextMonthBtn");
+const todayBtn = document.getElementById("todayBtn");
+
+/* Defaults */
+const todayISO = toISODate(new Date());
+startEl.value = todayISO; // default start = today
+
+/* -------------------- Categories UI -------------------- */
+function getCategoryById(id){ return categories.find(c => c.id === id) || categories[0]; }
+function renderCategoryOptions(){
+  categoryEl.innerHTML = categories.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
+}
+renderCategoryOptions();
+
+/* -------------------- Auto-sync Start / Due / Days -------------------- */
+/*
+  Priority rules:
+  - If Start + Days are available: auto-calc Due
+  - If Start + Due are available: auto-calc Days
+  - If Start is missing: we won't auto-calc (user must supply)
+*/
+function syncFromStartDaysToDue(){
+  const s = startEl.value ? parseDateInput(startEl.value) : null;
+  const n = (daysEl.value === "" ? null : Number(daysEl.value));
+  if (!s || n === null || !Number.isFinite(n) || n < 0) return;
+  dueEl.value = toISODate(dueFromStartAndDays(s, n));
+}
+function syncFromStartDueToDays(){
+  const s = startEl.value ? parseDateInput(startEl.value) : null;
+  const d = dueEl.value ? parseDateInput(dueEl.value) : null;
+  if (!s || !d) return;
+  const n = daysFromStartToDue(s, d);
+  daysEl.value = String(Math.max(0, n));
+}
+
+daysEl.addEventListener("input", () => {
+  // if user is typing days, compute due
+  syncFromStartDaysToDue();
+});
+
+dueEl.addEventListener("input", () => {
+  // if user picked due, compute days
+  syncFromStartDueToDays();
+});
+
+startEl.addEventListener("input", () => {
+  // when start changes, recompute whichever makes sense
+  if (daysEl.value !== "") syncFromStartDaysToDue();
+  else if (dueEl.value) syncFromStartDueToDays();
+});
+
+/* -------------------- Task View Filters -------------------- */
+let selectedDayISO = null; // filter by DUE date
+
+function getViewTasks(){
+  const q = (searchEl.value || "").trim().toLowerCase();
+  const f = filterEl.value;
+  const s = sortEl.value;
+
+  let list = [...tasks];
+
+  if (selectedDayISO) list = list.filter(t => t.dueDate === selectedDayISO);
+
+  if (f === "active") list = list.filter(t => !t.done);
+  if (f === "done") list = list.filter(t => t.done);
+  if (f === "overdue") list = list.filter(t => !t.done && dayDiffFromToday(parseDateInput(t.dueDate)) < 0);
+
+  if (q) list = list.filter(t => (t.title||"").toLowerCase().includes(q));
+
+  const byDue = (a,b) => parseDateInput(a.dueDate) - parseDateInput(b.dueDate);
+  const byCreated = (a,b) => a.createdAt - b.createdAt;
+
+  if (s === "dueAsc") list.sort(byDue);
+  if (s === "dueDesc") list.sort((a,b) => byDue(b,a));
+  if (s === "createdAsc") list.sort(byCreated);
+  if (s === "createdDesc") list.sort((a,b) => byCreated(b,a));
+
+  return list;
+}
+
+function updateStats(){
+  const total = tasks.length;
+  const active = tasks.filter(t => !t.done).length;
+  const overdue = tasks.filter(t => !t.done && dayDiffFromToday(parseDateInput(t.dueDate)) < 0).length;
+  statTotal.textContent = total;
+  statActive.textContent = active;
+  statOverdue.textContent = overdue;
+}
+
+/* -------------------- Render task table -------------------- */
+function renderTasks(){
+  updateStats();
+  const list = getViewTasks();
+
+  if (selectedDayISO) {
+    dayFilterPill.style.display = "inline-flex";
+    dayFilterText.textContent = formatDate(parseDateInput(selectedDayISO));
+  } else {
+    dayFilterPill.style.display = "none";
+  }
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">No tasks found. Add one above.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(t => {
+    const dueDateObj = parseDateInput(t.dueDate);
+    const diff = dayDiffFromToday(dueDateObj);
+
+    const left = diff >= 0 ? diff : "";
+    const overdue = diff < 0 ? Math.abs(diff) : "";
+
+    let statusClass = "warn", statusText = "Due today";
+    if (diff > 0) { statusClass = "good"; statusText = `${diff} day(s) left`; }
+    if (diff < 0) { statusClass = "bad";  statusText = `${Math.abs(diff)} day(s) overdue`; }
+
+    const cat = getCategoryById(t.categoryId);
+    const remind = Number(t.remindDays || 0);
+
+    const startTxt = t.startDate ? formatDate(parseDateInput(t.startDate)) : "—";
+    const dueTxt = formatDate(dueDateObj);
+
+    return `
+      <tr>
+        <td>
+          <div class="${t.done ? "done" : ""}"><strong>${escapeHtml(t.title)}</strong></div>
+          <div class="muted">
+            <span class="tag ${statusClass}">${statusText}</span>
+            ${remind ? `<span class="tag"><span class="dot" style="background:#a78bfa"></span>Remind: ${remind}d</span>` : ``}
+          </div>
+        </td>
+
+        <td>
+          <span class="tag">
+            <span class="dot" style="background:${escapeHtml(cat.color)}"></span>${escapeHtml(cat.name)}
+          </span>
+        </td>
+
+        <td>${startTxt}</td>
+        <td>${dueTxt}</td>
+        <td>${t.totalDays ?? ""}</td>
+        <td class="good">${left}</td>
+        <td class="bad">${overdue}</td>
+
+        <td class="right">
+          <div class="actions">
+            <button class="btn-lite btn-good" data-action="toggle" data-id="${t.id}">${t.done ? "Undo" : "Done"}</button>
+            <button class="btn-lite" data-action="edit" data-id="${t.id}">Edit</button>
+            <button class="btn-lite btn-danger" data-action="delete" data-id="${t.id}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+/* -------------------- Calendar -------------------- */
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+dowRow.innerHTML = DOW.map(d => `<div class="dow">${d}</div>`).join("");
+
+let calCursor = startOfLocalDay(new Date());
+calCursor.setDate(1);
+
+function tasksByDueDayMap(){
+  const map = new Map(); // dueISO -> tasks
+  for (const t of tasks) {
+    if (!map.has(t.dueDate)) map.set(t.dueDate, []);
+    map.get(t.dueDate).push(t);
+  }
+  return map;
+}
+
+function renderCalendar(){
+  const year = calCursor.getFullYear();
+  const month = calCursor.getMonth();
+  const first = new Date(year, month, 1);
+  const firstDow = first.getDay();
+  calTitle.textContent = first.toLocaleDateString(undefined, { month:"long", year:"numeric" });
+
+  const gridStart = new Date(year, month, 1 - firstDow);
+  const days = 42;
+
+  const map = tasksByDueDayMap();
+  const todayISO = toISODate(new Date());
+
+  let html = "";
+  for (let i=0; i<days; i++){
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    const iso = toISODate(d);
+
+    const inMonth = d.getMonth() === month;
+    const isSel = selectedDayISO === iso;
+    const isToday = iso === todayISO;
+
+    const dayTasks = map.get(iso) || [];
+    const activeCount = dayTasks.filter(t => !t.done).length;
+
+    const dots = dayTasks.slice(0,6).map(t => {
+      const cat = getCategoryById(t.categoryId);
+      return `<span class="dot" title="${escapeHtml(cat.name)}" style="background:${escapeHtml(cat.color)}"></span>`;
+    }).join("");
+
+    html += `
+      <div class="day ${inMonth ? "" : "out"} ${isSel ? "sel" : ""}" data-iso="${iso}">
+        <div class="daynum">
+          <span>${d.getDate()}${isToday ? " •" : ""}</span>
+          ${activeCount ? `<span class="badge">${activeCount}</span>` : `<span></span>`}
+        </div>
+        <div class="mini">${dots}</div>
+      </div>
+    `;
+  }
+  calGrid.innerHTML = html;
+}
+
+calGrid.addEventListener("click", (e) => {
+  const cell = e.target.closest(".day");
+  if (!cell) return;
+  const iso = cell.dataset.iso;
+  selectedDayISO = (selectedDayISO === iso) ? null : iso;
+  renderAll();
+});
+
+prevMonthBtn.addEventListener("click", () => {
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1);
+  renderCalendar();
+});
+nextMonthBtn.addEventListener("click", () => {
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1);
+  renderCalendar();
+});
+todayBtn.addEventListener("click", () => {
+  const now = new Date();
+  calCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+  selectedDayISO = null;
+  renderAll();
+});
+clearDayFilterBtn.addEventListener("click", () => {
+  selectedDayISO = null;
+  renderAll();
+});
+
+/* -------------------- Add / Edit tasks -------------------- */
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const title = titleEl.value.trim();
+  const startISO = (startEl.value || "").trim();
+  let dueISO = (dueEl.value || "").trim();
+  let totalDays = (daysEl.value === "" ? null : Number(daysEl.value));
+  const categoryId = categoryEl.value;
+  const remindDays = Number(remindDaysEl.value || 0);
+
+  if (!title) { alert("Please enter a task title."); return; }
+  if (!startISO) { alert("Please enter Date Started."); return; }
+
+  const startObj = parseDateInput(startISO);
+
+  // If due is blank but totalDays is provided, compute due
+  if (!dueISO && totalDays !== null && Number.isFinite(totalDays) && totalDays >= 0) {
+    dueISO = toISODate(dueFromStartAndDays(startObj, totalDays));
+    dueEl.value = dueISO;
+  }
+
+  // If totalDays is blank but due is provided, compute totalDays
+  if ((totalDays === null || !Number.isFinite(totalDays) || totalDays < 0) && dueISO) {
+    const dueObj = parseDateInput(dueISO);
+    totalDays = Math.max(0, daysFromStartToDue(startObj, dueObj));
+    daysEl.value = String(totalDays);
+  }
+
+  if (!dueISO) { alert("Please enter Date Due OR Total Days."); return; }
+  if (totalDays === null || !Number.isFinite(totalDays) || totalDays < 0) totalDays = 0;
+
+  tasks.push({
+    id: uid(),
+    title,
+    startDate: startISO,
+    dueDate: dueISO,
+    totalDays,
+    categoryId,
+    remindDays,
+    done: false,
+    createdAt: Date.now()
+  });
+  saveTasks();
+
+  form.reset();
+  startEl.value = toISODate(new Date()); // reset start to today
+  daysEl.value = "";
+  remindDaysEl.value = "0";
+  titleEl.focus();
+
+  renderAll();
+});
+
+tbody.addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  const id = btn.dataset.id;
+  const idx = tasks.findIndex(t => t.id === id);
+  if (idx === -1) return;
+
+  if (action === "toggle") {
+    tasks[idx].done = !tasks[idx].done;
+    saveTasks();
+    renderAll();
+    return;
+  }
+
+  if (action === "delete") {
+    tasks.splice(idx, 1);
+    saveTasks();
+    renderAll();
+    return;
+  }
+
+  if (action === "edit") {
+    const t = tasks[idx];
+
+    const newTitle = prompt("Edit task title:", t.title);
+    if (newTitle === null) return;
+
+    const newStart = prompt("Date Started (YYYY-MM-DD):", t.startDate || "");
+    if (newStart === null) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newStart)) { alert("Invalid start date."); return; }
+
+    const mode = prompt("Edit by: type 'due' to enter Date Due OR 'days' to enter Total Days:", "due");
+    if (mode === null) return;
+
+    let dueISO = t.dueDate;
+    let totalDays = t.totalDays ?? 0;
+
+    const startObj = parseDateInput(newStart);
+
+    if (mode.trim().toLowerCase() === "days") {
+      const nd = prompt("Total Days (Day 1 = day after start):", String(totalDays));
+      if (nd === null) return;
+      const n = Number(nd);
+      if (!Number.isFinite(n) || n < 0) { alert("Invalid days."); return; }
+      totalDays = n;
+      dueISO = toISODate(dueFromStartAndDays(startObj, totalDays));
+    } else {
+      const d = prompt("Date Due (YYYY-MM-DD):", dueISO);
+      if (d === null) return;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { alert("Invalid due date."); return; }
+      dueISO = d;
+      totalDays = Math.max(0, daysFromStartToDue(startObj, parseDateInput(dueISO)));
+    }
+
+    const newRemind = prompt("Remind days before due date (0,1,2,3,7):", String(t.remindDays || 0));
+    if (newRemind === null) return;
+    const r = Number(newRemind);
+    const remindDays = [0,1,2,3,7].includes(r) ? r : 0;
+
+    const catName = prompt("Category name (must match existing):", getCategoryById(t.categoryId).name);
+    if (catName === null) return;
+
+    const cat = categories.find(c => c.name.toLowerCase() === catName.trim().toLowerCase());
+    const categoryId = cat ? cat.id : t.categoryId;
+
+    tasks[idx] = {
+      ...t,
+      title: (newTitle.trim() || t.title),
+      startDate: newStart,
+      dueDate: dueISO,
+      totalDays,
+      remindDays,
+      categoryId
+    };
+    saveTasks();
+    renderAll();
+  }
+});
+
+[filterEl, sortEl, searchEl].forEach(el => el.addEventListener("input", () => renderTasks()));
+
+/* Clear all */
+clearAllBtn.addEventListener("click", () => {
+  if (!confirm("Clear ALL tasks? This cannot be undone.")) return;
+  tasks = [];
+  saveTasks();
+  selectedDayISO = null;
+  renderAll();
+});
+
+/* -------------------- Categories -------------------- */
+addCatBtn.addEventListener("click", () => {
+  const name = prompt("New category name (e.g., Research):");
+  if (!name) return;
+
+  const color = prompt("Category color hex (e.g., #a78bfa):", "#a78bfa");
+  if (!color) return;
+  if (!/^#([0-9a-fA-F]{6})$/.test(color.trim())) { alert("Invalid hex color. Use like #a78bfa"); return; }
+
+  const idBase = name.trim().toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9\-]/g,"");
+  const finalId = categories.some(c => c.id === idBase) ? uid() : idBase;
+
+  categories.push({ id: finalId, name: name.trim(), color: color.trim() });
+  saveCategories();
+  renderCategoryOptions();
+  categoryEl.value = finalId;
+
+  renderAll();
+});
+
+/* -------------------- Notifications -------------------- */
+async function requestNotifications(){
+  if (!("Notification" in window)) { alert("Notifications not supported in this browser."); return false; }
+  if (Notification.permission === "granted") return true;
+  const perm = await Notification.requestPermission();
+  return perm === "granted";
+}
+function notify(title, body){
+  try { new Notification(title, { body }); }
+  catch { alert(title + "\n\n" + body); }
+}
+notifBtn.addEventListener("click", async () => {
+  const ok = await requestNotifications();
+  notifBtn.textContent = ok ? "Notifications enabled" : "Enable notifications";
+});
+
+function runReminderCheck(){
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+
+  const log = loadNotifLog();
+  const todayISO = toISODate(new Date());
+
+  for (const t of tasks) {
+    if (t.done) continue;
+
+    const dueObj = parseDateInput(t.dueDate);
+    const diff = dayDiffFromToday(dueObj);
+    const remindDays = Number(t.remindDays || 0);
+
+    const triggers = [];
+    if (diff === 0) triggers.push("due-today");
+    if (diff < 0) triggers.push("overdue");
+    if (remindDays > 0 && diff === remindDays) triggers.push(`remind-${remindDays}`);
+    if (!triggers.length) continue;
+
+    for (const tr of triggers) {
+      const key = `${t.id}:${tr}:${todayISO}`;
+      if (log[key]) continue;
+
+      const dl = formatDate(dueObj);
+      const cat = getCategoryById(t.categoryId).name;
+
+      let msg = `Category: ${cat} · Due: ${dl}`;
+      if (tr.startsWith("remind-")) msg = `${msg} · Reminder: ${remindDays} day(s) before`;
+      if (tr === "due-today") msg = `${msg} · Due today`;
+      if (tr === "overdue") msg = `${msg} · Overdue by ${Math.abs(diff)} day(s)`;
+
+      notify("Task reminder: " + t.title, msg);
+      log[key] = true;
+    }
+  }
+  saveNotifLog(log);
+}
+setInterval(runReminderCheck, 60 * 1000);
+
+/* -------------------- Render all -------------------- */
+function renderAll(){
+  todayPill.textContent = formatDate(new Date());
+  renderTasks();
+  renderCalendar();
+}
+renderAll();
+setTimeout(runReminderCheck, 1500);
+</script>
+</body>
+</html>
